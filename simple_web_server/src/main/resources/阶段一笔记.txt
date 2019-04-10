@@ -1,0 +1,104 @@
+结构篇：
+/*
+ * HTTP请求结构：
+ *  一个HTTP请求包括四部分：
+ *  1.方法-统一资源标识符-协议/版本          POST /example/index.html  HTTP/1.1
+ *  2.请求的头部                             Accept: text/plain: text/html
+ *                                           Accept-Language:en-gb
+ *                                           Connection: keep-Alive
+ *                                           Host: localhost
+ *                                           User-Agent: Mozilla/4.0 (compatible; MSIE 4.01; Windows 98)
+ *                                           Content-Length: 33
+ *                                           Content-Type: application/x-www-form-urlencoded
+ *                                           Accept-Encoding: gzip,deflate
+ * 3.空行(CRLF)
+ * 4.主体内容                                lastName=Tom&firstName=Ming
+ *
+ * 扩展：1.Http1.1中支持7中方法，GET/POST/HEAD/OPTIONS/PUT/DELETE/TRACE
+ *       2.每一个头部都是通过CRLF空行来分隔的
+ */
+ /*
+  * Http响应体结构：
+  * 一个Http响应结构包括四部分：
+  *    1.协议/版本-状态标识符-状态码        HTTP/1.1 200 OK
+  *    2.响应头部                           Server:Microsoft-IIS/4.0
+  *                                         Date: Mon,5 Jan 2019 14:12:12 GMT
+  *                                         Content-Type: text/html
+  *                                         Last-Modified: Mon,5 Jan 2019 14:12:02 GMT
+  *                                         Content-Length: 112
+  *   3.空行(CRLF)
+  *   4.主体内容                             <!DOCTYPE html>
+  *                                          <html lang="en">
+  *                                          <head>
+  *                                          <meta charset="UTF-8">
+  *                                          <title>测试静态资源</title>
+  *                                          </head>
+  *                                          <body>
+  *                                              这是测试文件！！！
+  *                                          </body>
+  *                                           </html>
+  *
+  */
+  /* request类代表一个Http请求，从负责与客户端通信的Socket中传递来的InputStream对象中
+   * 构造这个类的一个实例，调用InputStream对象中一个read方法来获取到HTTP请求的原
+   * 始数据。
+   */
+
+两个核心的类：
+   Socket类：客户端套接字，想要连接到服务器端构造的套接字
+        Socket类时网络连接的一个端点，套接字使得一个应用可从网络中读取和写入数据，处于两个
+   不同的计算机上的两个应用可以通过连接发送和接受字节流。使用时需要知道另一个应用的IP地址
+   和对应的套接字端口号。
+        构造方法：public Socket("主机名或ip",指定的端口号)
+        使用方法：创建Socket类实例后，可以使用它来发送和接受字节流；发送字节流，首先需要调
+   用Socket类的getOutputStream方法来获取一个java.io.OutputStream对象。其次，要想发送文本到
+   一个远程应用，需要从返回的OutputStream对象中都在一个getInputStream方法用来来返回一个对象
+   java.io.InputStream对象。
+        示例代码：
+            Socket socket = new Socket("127.0.0.1",8080);
+            OutputStream os = socket.getOutputStream();
+            boolean autoflush = true;
+            PrintWriter out = new PrintWriter(socket.getOutputStream(),autoflush);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            //发送请求
+            out.println("GET /index.html HTTP/1.1");
+            out.println("Host: localhost:8080");
+            out.println("Connection: Close");
+            out.println();
+            //读取响应
+            boolean loop = true;
+            StringBuffer sb = new StringBuffer(8096);
+            while(loop){
+                if(in.read()){
+                    int i = 0;
+                    while(i!=-1){
+                        i = in.read();
+                        sb.append((char)i);
+                    }
+                    loop = false;
+                }
+                Thread.currentThread().sleep(50);
+            }
+            //显示
+            System.out.println(sb.toString());
+            socket.close();
+
+   ServerSocket类：服务端套接字
+        ServerSocket，想要实现一个服务端应用，用来响应客户端请求，使用它。一旦服务端套接字获取
+   一个连接请求，它创建一个Socket实例来与客户端通信。
+        多个构造方法，之一是：public ServerSocket(int port,int backLog,InetAddress bindingAddress);
+   一旦创建ServerSocket实例，可以在绑定地址和服务器套接字正在监听的端口等待传入的连接请求，可以通过
+   ServerSocket的accept方法实现它。该方法只有有连接请求时才会返回一个socket实例。Socket对象接下去可
+   以发送字节流从客户端应用接受字节流。
+
+各个类作用
+    1.HttpServer:创建一个HttpServer实例并调用它的await方法，来等待Http请求，处理它们并响应发给客户端。
+    一直等待收到shutdown命令。
+    2.Request:发送请求，请求指定的静态资源
+    3.服务器端HttpServer接受到请求后，利用服务器套接字返回的Socket得到InputStream和OutputStream
+    4.Request:解析InputStream获取请求的URL中的资源
+    5.Response:组装响应头，读取指定资源文件，并利用OutputStream返回数据给浏览器
+
+
+WEB_ROOT路径需要自己指定
+
